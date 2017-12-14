@@ -5,6 +5,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 //regarder si la socket est créée et si non on renvoie le message d'erreur fournie
 #define CHECK(sts,msg) if((sts)==-1){perror(msg);exit(-1);}
