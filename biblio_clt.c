@@ -22,7 +22,7 @@ void connexionServeurCentral(int* sDialogue){
 	//Preparation de l'adressage serveur
 	struct sockaddr_in svc;
 	svc.sin_family=AF_INET;
-	svc.sin_port=htons(PORT_SRV);  
+	svc.sin_port=htons(PORT_SRV);
 	svc.sin_addr.s_addr=inet_addr(IP_SRV);
 	memset(&svc.sin_zero,0,8);
 
@@ -34,13 +34,13 @@ void connexionServeurCentral(int* sDialogue){
 
 /*Dialogue avec le serveurCentral*/
 void dialogueServeurCentral(int* sDialogue, int* mode, char* pseudo)
-{
+{ 
 	char req[MAX_BUFF]; //requete
 	memset(req,MAX_BUFF,0); //nettoyer la chaine de requete
 	
 	//Dmd connexion 
 	sprintf(req,"%i\\%s\\%i",110,pseudo,*mode); 
-	CHECK(write(*sDialogue,req,strlen(req)+1),"Erreur Envoi Requete");
+	CHECK(write((int) sDialogue,req,strlen(req)+1),"Erreur Envoi Requete");
 /*
 	traiterReq(sa,req,&tailleN);
 	
@@ -53,7 +53,7 @@ void dialogueServeurCentral(int* sDialogue, int* mode, char* pseudo)
 
 }
 
-/*
+
 //Traite les requêtes
 void traiterReq(int* sa,char* req, int* taille)
 {
@@ -76,20 +76,9 @@ void traiterReq(int* sa,char* req, int* taille)
 			printf("Communication terminée \n");
 		break; 
 
-		case 100 : //Affiche taille
-			sscanf(rep,"%i:%i",&repId,taille);  //séparateur de champ :
-			printf("Taille = %i \n", *taille);
-		break;	
-
-		case 200 : //Affiche elements
-			sscanf(rep,"%i:%s",&repId,element);
-			printf("%s \n",element);	 
+		case 310 :
+			printf("%s\n", rep);
 		break;
-		
-		case 250 : //Affiche out of range
-			printf("Depassement tableau \n");	
-		break;
-	
 	}
 }  
-*/
+

@@ -29,6 +29,9 @@ void dialogueClient(int sd, int* nbClient, client* client)
 			//Recuppère l'id de la commande
 			//sscanf(req,"%i",&idCommande);
 			printf("La requete est: %s",req);
+
+			sprintf(rep,"%i",310);	
+			CHECK(write(sd,rep,strlen(rep)+1),"Erreur Envoi Requete");
 		/*	
 			switch (idCommande){
 
