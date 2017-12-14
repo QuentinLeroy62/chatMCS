@@ -10,7 +10,7 @@ void derouter(int sg)
 }
 
 /*Fonction pour le dialogue avec un client*/
-void dialogueClient(int sd)
+void dialogueClient(int sd, int* nbClient, client* client)
 {
 
 	char req[MAX_BUFF]; //stocke la requete
@@ -19,19 +19,17 @@ void dialogueClient(int sd)
 	memset(req,MAX_BUFF,0); //nettoyer la chaine de requete
 	memset(rep,MAX_BUFF,0); //nettoyer la chaine de reponse
 
-	int idCommande=100; //stocke l'id de la commande initialisation à 100 pour passer au - moins une fois dans le while
-	int tailleN=0; //stocke la taille du tableau du serveur
-	int indice; //stocke l'indice demandé 
+	int idCommande=0; //stocke l'id de la commande initialisation à 0pour passer au - moins une fois dans le while
 
-
-		while(idCommande != 0){ //CMD=0 -> Quitter communication
+		//while(idCommande != 160){ //CMD=160 -> Quitter communication
 
 			//Reception requete
 			CHECK(read(sd,req,MAX_BUFF),"Erreur Reception Requete");
 
 			//Recuppère l'id de la commande
-			sscanf(req,"%i",&idCommande);
-			
+			//sscanf(req,"%i",&idCommande);
+			printf("La requete est: %s",req);
+		/*	
 			switch (idCommande){
 
 				case 0 : //Fin communication
@@ -62,8 +60,8 @@ void dialogueClient(int sd)
 
 				break;
 			
-			}
-		} 
+			}*/
+		//} 
 
 }
 

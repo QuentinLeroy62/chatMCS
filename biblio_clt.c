@@ -40,7 +40,8 @@ void dialogueServeurCentral(int* sDialogue, int* mode, char* pseudo)
 	
 	//Dmd connexion 
 	sprintf(req,"%i\\%s\\%i",110,pseudo,*mode); 
-/*	
+	CHECK(write(*sDialogue,req,strlen(req)+1),"Erreur Envoi Requete");
+/*
 	traiterReq(sa,req,&tailleN);
 	
 	//Attente choix du

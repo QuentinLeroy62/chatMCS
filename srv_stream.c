@@ -1,12 +1,10 @@
 #include "biblio_srv.h"
-#include <unistd.h>
-#include <signal.h>
-#include <sys/types.h>
-#include <sys/wait.h>
 
 int main(){
 	
-struct client[MAX_CLIENT];
+client ensClient[MAX_CLIENT];
+int nbClient=0;
+int pid;
 
 
 /////Mise en place du déroutement///
@@ -57,7 +55,8 @@ struct client[MAX_CLIENT];
 		lenSd = sizeof(client);
 
 		CHECK(sd=accept(se,(struct sockaddr*)&client,&lenSd),"Erreur Accept");
-
+		nbClient++;
+		
 		//printf("Accepted connection from %s:%d\n", inet_ntoa(dialogue.sin_addr), ntohs(dialogue.sin_port));
 		
 		//Creation d'un processus de service pour le client
@@ -66,7 +65,7 @@ struct client[MAX_CLIENT];
 		//Fils dialogue avec le client
 		if(pid == 0){
 		   		close(se); //fermer socket ecoute
-		  		dialogueClient(sd); //dialogue
+		  		dialogueClient(sd,&nbClient,ensClient); //dialogue
 		  		close(sd); //fermer socket dialogue
 		  		exit(0); //tue le fils
 		}
