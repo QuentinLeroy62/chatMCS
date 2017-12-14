@@ -17,6 +17,7 @@ void connexionServeurCentral(int* sDialogue){
 	
 	//Sa prend la valeur du canal (Mode TCP)
 	CHECK(*sDialogue=socket(AF_INET,SOCK_STREAM,0),"probleme creation socket");  
+//coucou
 	
 	//Preparation de l'adressage serveur
 	struct sockaddr_in svc;
