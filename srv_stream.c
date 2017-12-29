@@ -1,21 +1,19 @@
 #include "biblio_srv.h"
 
-int main(){
-	
+//Variables globales
+int nbClient = 0;
 client ensClient[MAX_CLIENT];
-int nbClient=0;
-int pid;
 
 
-/////Mise en place du déroutement///
-	struct sigaction newAct;
-	
-	newAct.sa_handler=derouter;
-	newAct.sa_flags=SA_RESTART;
-	
-	CHECK(sigemptyset(&newAct.sa_mask),"Erreur sigemptyset");
-	CHECK(sigaction(SIGCHLD,&newAct,NULL),"Erreur sigaction");
-/////////////////////////////////////////////////////////
+//Mutex
+pthread_mutex_t  mutex_ensembleClient  = PTHREAD_MUTEX_INITIALIZER;
+
+
+int main(){
+
+pthread_t thService; 
+void ** resultat; 
+
 		
 //////////Défintion des sockets//////////////
 	//Socket écoute	
@@ -48,6 +46,18 @@ int pid;
 	
 //////////////////////////////
 
+/////////Initialisation ensClient////////
+
+	pthread_mutex_lock(&mutex_ensembleClient); 
+		
+		//Mise en place du tableau creux
+		for(int i=0; i<MAX_CLIENT;i++){
+			ensClient[i].mode = -1;
+		}	
+
+	pthread_mutex_unlock(&mutex_ensembleClient);
+
+/////////////////////////////////////////
 
 	while(1){			
 		
@@ -55,20 +65,21 @@ int pid;
 		lenSd = sizeof(client);
 
 		CHECK(sd=accept(se,(struct sockaddr*)&client,&lenSd),"Erreur Accept");
-		nbClient++;
-		
+
+		// On verrouille et dévérouille le mutex //
+		pthread_mutex_lock(&mutex_ensembleClient); 
+			nbClient++;
+		pthread_mutex_unlock(&mutex_ensembleClient);
+
+
 		//printf("Accepted connection from %s:%d\n", inet_ntoa(dialogue.sin_addr), ntohs(dialogue.sin_port));
+
+		//Creation du thread de service
+	  	CHECK(pthread_create(&thService,NULL,traitementThread,(void*)&sd),"Pb creation thread");
 		
-		//Creation d'un processus de service pour le client
-		CHECK(pid = fork(), "Erreur creation processus");
+		//Detachement du thread de service
+		CHECK(pthread_detach(thService),"Pb detachement thread");
 		
-		//Fils dialogue avec le client
-		if(pid == 0){
-		   		close(se); //fermer socket ecoute
-		  		dialogueClient(sd,&nbClient,ensClient); //dialogue
-		  		close(sd); //fermer socket dialogue
-		  		exit(0); //tue le fils
-		}
 	
 	}
 
