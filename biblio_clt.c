@@ -1,5 +1,91 @@
 #include "biblio_clt.h"
 
+/////MODE CLIENT-SERVEUR///////
+
+/*Creation d'une socket Ecoute pour le client*/
+void creationSocketEcoute(int* se,struct sockaddr_in* svc){
+
+	pthread_t thService; 
+	void ** resultat; 
+
+	//////////Adressage du Client - serveur////////////
+	
+	CHECK(*se=socket(AF_INET,SOCK_STREAM,0),"probleme creation socket Ecoute");  
+	
+	//preparation de l'adressage
+	svc->sin_family=AF_INET;
+	svc->sin_port=htons(6000); //prend un port libre aléatoire  
+	svc->sin_addr.s_addr=htonl(INADDR_LOOPBACK);
+	memset(svc->sin_zero,0,8);
+
+
+	CHECK(bind(*se,(struct sockaddr*)svc,sizeof(*svc)),"test associer adr a la socket Ecoute");
+
+	printf("%d\n",*se);
+	printf("%d\n",ntohs(svc->sin_port));
+	printf("%s\n",svc->sin_zero);
+
+	//CONFIGURATION DU CLIENT SEVEUR EN ECOUTE
+	listen(*se,20); //20 en backlog (20 connection gardée en mémoire max si occupé) 
+	
+	//Creation du thread de service
+	CHECK(pthread_create(&thService,NULL,EcouteClient,(void*)se),"Pb creation thread");
+
+	//Detachement du thread de service
+	CHECK(pthread_detach(thService),"Pb detachement thread");
+
+	close(*se);//fermer la socket d'écoute
+	return;
+}
+
+
+/*Thread qui écoute en continu la socket du Client serveur*/
+void * EcouteClient(void* argSe){
+
+	//Cast l'argument en int*
+	int* se = (int*) argSe;
+
+	printf("%d\n",*se);
+
+	//Socket Dialogue
+	int sd;
+
+	//Socket Client 
+	struct sockaddr_in client; 
+	socklen_t lenSd;
+
+	pthread_t thService; 
+	void ** resultat; 
+
+	while(1){			
+		
+		//Accepte la connexion et création socket clienet
+		lenSd = sizeof(client);
+
+		CHECK(sd=accept(*se,(struct sockaddr*)&client,&lenSd),"Erreur Accept Ecoute");
+
+		//printf("Accepted connection from %s:%d\n", inet_ntoa(dialogue.sin_addr), ntohs(dialogue.sin_port));
+
+		//Creation du thread de service
+	  	CHECK(pthread_create(&thService,NULL,traitementThreadClient,(void*)&sd),"Pb creation thread");
+		
+		//Detachement du thread de service
+		CHECK(pthread_detach(thService),"Pb detachement thread");
+	}
+
+	pthread_exit(0);
+}
+
+/*Thread qui traite la conenxion du client*/
+void * traitementThreadClient(void* argSd){
+
+	printf("Traitement du thread Client\n");
+	pthread_exit(0);
+}
+
+
+//////MODE CLIENT////////
+
 /* Affiche le menu de l'app*/
 void afficherMenu(int* choix){
 	printf("Veuillez-choisir le mode d'utilisation :\n\n");
@@ -11,7 +97,7 @@ void afficherMenu(int* choix){
 	scanf("%d",choix);
 }
 
-
+/*Demande le pseudo au moment de la connexion*/
 void demandePseudo(char* pseudo) {
 	printf("Veuillez-saisir votre pseudo \n");
 	scanf("%s",pseudo);

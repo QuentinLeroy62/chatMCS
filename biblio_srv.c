@@ -10,7 +10,7 @@ void * traitementThread (void* sd)
 	close(*mySocket); //fermer socket dialogue
 	
 	// On verrouille et dévérouille le mutex //
-	pthread_mutex_lock(&mutex_ensembleClient); 
+	pthread_mutex_lock(&mutex_ensembleClient);
 		nbClient--;
 	pthread_mutex_unlock(&mutex_ensembleClient);
 

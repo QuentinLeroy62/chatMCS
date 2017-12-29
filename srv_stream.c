@@ -41,6 +41,10 @@ void ** resultat;
 
 	CHECK(bind(se,(struct sockaddr*)&svc,sizeof(svc)),"test associer adr a la socket");
 
+	printf("%d\n",se);
+	printf("%d\n",ntohs(svc.sin_port));
+	printf("%s\n",svc.sin_zero);
+
 	//CONFIGURATION DU SEVEUR EN ECOUTE
 	listen(se,20); //20 en backlog (20 connection gardée en mémoire max si occupé) 
 	
@@ -74,8 +78,8 @@ void ** resultat;
 
 		//printf("Accepted connection from %s:%d\n", inet_ntoa(dialogue.sin_addr), ntohs(dialogue.sin_port));
 
-    		//Creation du thread de service
-    	  	CHECK(pthread_create(&thService,NULL,traitementThread,(void*)&sd),"Pb creation thread");
+		//Creation du thread de service
+	  	CHECK(pthread_create(&thService,NULL,traitementThread,(void*)&sd),"Pb creation thread");
 		
 		//Detachement du thread de service
 		CHECK(pthread_detach(thService),"Pb detachement thread");

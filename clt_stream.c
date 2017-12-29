@@ -3,16 +3,23 @@
 
 int main(){
 
-char pseudo[MAX_CLIENT];
 
+char pseudo[MAX_CLIENT];
 int mode, sDialogueServeur;
+
+//Pour le mode serveur
+int se;
+struct sockaddr_in svc;
+
 	
 	afficherMenu(&mode);
 	demandePseudo(pseudo);
-	
-	connexionServeurCentral(&sDialogueServeur);
 
-	identification(&sDialogueServeur,&mode,pseudo);	
+	creationSocketEcoute(&se,&svc);
+	
+	//connexionServeurCentral(&sDialogueServeur);
+
+	//identification(&sDialogueServeur,&mode,pseudo);	
 	
 	switch(mode)
 	{
