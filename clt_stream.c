@@ -3,17 +3,26 @@
 
 int main(){
 
-char pseudo[MAX_PSEUDO];
+char pseudo[MAX_CLIENT];
+
 int mode, sDialogueServeur;
 	
 	afficherMenu(&mode);
-
-	printf("Veuillez-saisir votre pseudo \n");
-	scanf("%s",pseudo);
+	demandePseudo(pseudo);
 	
 	connexionServeurCentral(&sDialogueServeur);
 
-	dialogueServeurCentral(&sDialogueServeur,&mode,pseudo);	
+	identification(&sDialogueServeur,&mode,pseudo);	
+	
+	switch(mode)
+	{
+		case (1) : 
+				modeTchat(&sDialogueServeur);		
+		break;
+	
+	
+	
+	}
 	
 	close(sDialogueServeur); //Fermeture socket dialogue
 
