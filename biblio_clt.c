@@ -173,7 +173,7 @@ void identification(int* sa,int* mode, char* pseudo, struct sockaddr_in* svcClt)
 				demandePseudo(pseudo);
 				//Renvoyer les données
 				memset(req,MAX_BUFF,0); //nettoyer la chaine de requete
-				sprintf(req,"%i\\%s\\%i",110,pseudo,*mode); 
+				sprintf(req,"%i\\%s\\%i\\%i\\%i",110,pseudo,svcClt->sin_addr.s_addr,svcClt->sin_port,*mode); 
 				CHECK(write(*sa,req,strlen(req)+1),"Erreur Envoi Requete");
 				
 			}
