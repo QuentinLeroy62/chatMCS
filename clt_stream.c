@@ -9,17 +9,18 @@ int mode, sDialogueServeur;
 
 //Pour le mode serveur
 int se;
-struct sockaddr_in svc;
+struct sockaddr_in svcClt;
 
-	
+
 	afficherMenu(&mode);
 	demandePseudo(pseudo);
 
-	creationSocketEcoute(&se,&svc);
 	
-	//connexionServeurCentral(&sDialogueServeur);
+	creationSocketEcoute(&se,&svcClt);
 
-	//identification(&sDialogueServeur,&mode,pseudo);	
+	connexionServeurCentral(&sDialogueServeur);
+
+	identification(&sDialogueServeur,&mode,pseudo,&svcClt);	
 	
 	switch(mode)
 	{

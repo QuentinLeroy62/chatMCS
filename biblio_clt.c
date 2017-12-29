@@ -9,22 +9,27 @@ void creationSocketEcoute(int* se,struct sockaddr_in* svc){
 	void ** resultat; 
 
 	//////////Adressage du Client - serveur////////////
+	CHECK(*se=socket(AF_INET,SOCK_STREAM,0),"probleme creation socket Ecoute");
 	
-	CHECK(*se=socket(AF_INET,SOCK_STREAM,0),"probleme creation socket Ecoute");  
-	
+	int portAlea = (rand()%(65535-6501)+6501);	
+
 	//preparation de l'adressage
 	svc->sin_family=AF_INET;
-	svc->sin_port=htons(6000); //prend un port libre aléatoire  
-	svc->sin_addr.s_addr=htonl(INADDR_LOOPBACK);
+	svc->sin_port=0; //prend un port libre aléatoire  
+	svc->sin_addr.s_addr=inet_addr(IP_SRV);
 	memset(svc->sin_zero,0,8);
-
 
 	CHECK(bind(*se,(struct sockaddr*)svc,sizeof(*svc)),"test associer adr a la socket Ecoute");
 
-	printf("%d\n",*se);
-	printf("%d\n",ntohs(svc->sin_port));
-	printf("%s\n",svc->sin_zero);
+	//Recupération du port et de l'adresse de la socke écoute
+	struct sockaddr_in socketRecup;
+	int tailleStruct = sizeof(socketRecup);
+	getsockname(*se,(struct sockaddr*)&socketRecup,&tailleStruct);
+	
+	svc->sin_addr.s_addr=socketRecup.sin_addr.s_addr;
+	svc->sin_port=socketRecup.sin_port;
 
+ 
 	//CONFIGURATION DU CLIENT SEVEUR EN ECOUTE
 	listen(*se,20); //20 en backlog (20 connection gardée en mémoire max si occupé) 
 	
@@ -34,7 +39,6 @@ void creationSocketEcoute(int* se,struct sockaddr_in* svc){
 	//Detachement du thread de service
 	CHECK(pthread_detach(thService),"Pb detachement thread");
 
-	close(*se);//fermer la socket d'écoute
 	return;
 }
 
@@ -44,8 +48,6 @@ void * EcouteClient(void* argSe){
 
 	//Cast l'argument en int*
 	int* se = (int*) argSe;
-
-	printf("%d\n",*se);
 
 	//Socket Dialogue
 	int sd;
@@ -62,7 +64,7 @@ void * EcouteClient(void* argSe){
 		//Accepte la connexion et création socket clienet
 		lenSd = sizeof(client);
 
-		CHECK(sd=accept(*se,(struct sockaddr*)&client,&lenSd),"Erreur Accept Ecoute");
+		//CHECK(sd=accept(*se,(struct sockaddr*)&client,&lenSd),"Erreur Accept Ecoute");
 
 		//printf("Accepted connection from %s:%d\n", inet_ntoa(dialogue.sin_addr), ntohs(dialogue.sin_port));
 
@@ -72,14 +74,16 @@ void * EcouteClient(void* argSe){
 		//Detachement du thread de service
 		CHECK(pthread_detach(thService),"Pb detachement thread");
 	}
-
+	
+	//fermer la socket d'écoute et le thread
+	close(*se);
 	pthread_exit(0);
 }
 
 /*Thread qui traite la conenxion du client*/
 void * traitementThreadClient(void* argSd){
 
-	printf("Traitement du thread Client\n");
+	//printf("Traitement du thread Client\n");
 	pthread_exit(0);
 }
 
@@ -106,8 +110,8 @@ void demandePseudo(char* pseudo) {
 /*Etablit une connexion avec le serveur central*/
 void connexionServeurCentral(int* sDialogue){
 	
-	//Sa prend la valeur du canal (Mode TCP)
-	CHECK(*sDialogue=socket(AF_INET,SOCK_STREAM,0),"probleme creation socket");  
+	//Creation de la socket de dialogue
+	CHECK(*sDialogue=socket(AF_INET,SOCK_STREAM,0),"probleme creation socket Dialogue Serveur Central");
 	
 	//Preparation de l'adressage serveur
 	struct sockaddr_in svc;
@@ -125,7 +129,7 @@ void connexionServeurCentral(int* sDialogue){
 
 
 //Traite les requêtes d'identification
-void identification(int* sa,int* mode, char* pseudo)
+void identification(int* sa,int* mode, char* pseudo, struct sockaddr_in* svcClt)
 {
 
 	char req[MAX_BUFF]; //requete
@@ -137,7 +141,7 @@ void identification(int* sa,int* mode, char* pseudo)
 	int repId = 0; //stockage Id reponse
 	
 	//Dmd connexion 
-	sprintf(req,"%i\\%s\\%i",110,pseudo,*mode); 
+	sprintf(req,"%i\\%s\\%i\\%i\\%i",110,pseudo,svcClt->sin_addr.s_addr,svcClt->sin_port,*mode); 
 	CHECK(write(*sa,req,strlen(req)+1),"Erreur Envoi Requete");
 
 	//Reception reponse

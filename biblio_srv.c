@@ -59,14 +59,19 @@ void dialogueClient(int* sd)
 							i++;
 						}						
 						
-						//Pour recup la socket client 
+						//Reconstitution de la socket Ecoute client 
 						struct sockaddr_in clientRecup; 
-						socklen_t lenClientRecup;
-						lenClientRecup = sizeof(clientRecup);
-
-						getpeername(*sd,(struct sockaddr*)&clientRecup,&lenClientRecup);
-
-
+						clientRecup.sin_family=AF_INET;
+						clientRecup.sin_addr.s_addr=atoi(req_decoupe[2]);
+						clientRecup.sin_port=atoi(req_decoupe[3]);
+						memset(&clientRecup.sin_zero,0,8);	
+					
+						printf("Pseudo %s\n",req_decoupe[1]); 
+						printf("Adresse %d\n",atoi(req_decoupe[2]));
+						printf("Port %d\n",atoi(req_decoupe[3]));
+						printf("Mode %d\n",atoi(req_decoupe[4]))
+;						
+						
 						// On verrouille et dévérouille le mutex //
 						pthread_mutex_lock(&mutex_ensembleClient); 
 							int j = 0;
@@ -87,7 +92,7 @@ void dialogueClient(int* sd)
 											
 							if(testPseudo){
 								 strcpy(ensClient[j].pseudo,req_decoupe[1]);
-								 ensClient[j].mode = atoi(req_decoupe[2]);
+								 ensClient[j].mode = atoi(req_decoupe[4]);
 								 ensClient[j].socketClient = clientRecup;
 							}
 
