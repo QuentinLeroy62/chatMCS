@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <signal.h>
 #include <sys/types.h>
+#include <sys/times.h>
 #include <sys/wait.h>
 #include <pthread.h>
  

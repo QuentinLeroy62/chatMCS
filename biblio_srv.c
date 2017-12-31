@@ -144,7 +144,7 @@ void dialogueClient(int* sd, char* pseudo)
 							for(int i=0; i<MAX_CLIENT; i++){
 
 								//Verfie qu'on est en mode Tchat et que ce n'est pas nous même 
-								if((ensClient[i].mode == 1 || ensClient[i].mode == 2) && (strcmp(ensClient[i].pseudo,pseudo)!=0)){
+								if((ensClient[i].mode == 1 || ensClient[i].mode == 2) && (strcmp(ensClient[i].pseudo,pseudo)!=0) && ensClient[i].etat == 0){
 									strcat(infoClient,"\\");
 									strcat(infoClient,ensClient[i].pseudo);
 									nbClientTchat++;
