@@ -40,7 +40,7 @@ void ** resultat;
 
 
 	CHECK(bind(se,(struct sockaddr*)&svc,sizeof(svc)),"test associer adr a la socket");
-
+	
 	//CONFIGURATION DU SEVEUR EN ECOUTE
 	listen(se,20); //20 en backlog (20 connection gardée en mémoire max si occupé) 
 	

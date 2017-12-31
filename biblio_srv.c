@@ -5,20 +5,39 @@ void * traitementThread (void* sd)
 {
 	//Cast l'argument en int*
 	int* mySocket = (int*) sd;
+
+	//Pour stocker le pseudo du Client de ce thread
+	char pseudo[MAX_TAILLE_PSEUDO];	
 	
-	dialogueClient(mySocket); //dialogue
+	dialogueClient(mySocket,pseudo); //dialogue
 	close(*mySocket); //fermer socket dialogue
 	
 	// On verrouille et dévérouille le mutex //
 	pthread_mutex_lock(&mutex_ensembleClient);
 		nbClient--;
+
+		//On retire le client de l'ensemble des clients connectés
+		for(int i=0; i<MAX_CLIENT; i++){
+			
+			//Recherche du client et suppression du tableau 
+			if(strcmp(pseudo,ensClient[i].pseudo)==0){
+				
+				strcpy(ensClient[i].pseudo,"");
+				ensClient[i].mode = -1;
+				ensClient[i].etat = 0;
+				memset(&ensClient[i].socketClient,0,sizeof(struct sockaddr_in));
+				
+				break;
+			}  
+
+		}	
 	pthread_mutex_unlock(&mutex_ensembleClient);
 
 	pthread_exit(0);
 }
 
 /*Fonction pour le dialogue avec un client*/
-void dialogueClient(int* sd)
+void dialogueClient(int* sd, char* pseudo)
 {
 
 	char req[MAX_BUFF]; //stocke la requete
@@ -31,7 +50,7 @@ void dialogueClient(int* sd)
 	int idCommande=0; //stocke l'id de la commande initialisation à 0pour passer au - moins une fois dans le while
 	char *result;
 
-		//while(idCommande != 160){ //CMD=160 -> Quitter communication
+		while(1){
 
 			//Reception requete
 			CHECK(read(*sd,req,MAX_BUFF),"Erreur Reception Requete");
@@ -49,6 +68,12 @@ void dialogueClient(int* sd)
 			
 			switch (idCommande){
 				
+				//Arreter communication avec le serveur central	
+				case 0 :
+					printf("Communication avec le serveur terminée\n"); 
+					return;
+				break;
+
 				//Première connexion
 				case 110 : {
 
@@ -66,12 +91,6 @@ void dialogueClient(int* sd)
 						clientRecup.sin_port=atoi(req_decoupe[3]);
 						memset(&clientRecup.sin_zero,0,8);	
 					
-						printf("Pseudo %s\n",req_decoupe[1]); 
-						printf("Adresse %d\n",atoi(req_decoupe[2]));
-						printf("Port %d\n",atoi(req_decoupe[3]));
-						printf("Mode %d\n",atoi(req_decoupe[4]))
-;						
-						
 						// On verrouille et dévérouille le mutex //
 						pthread_mutex_lock(&mutex_ensembleClient); 
 							int j = 0;
@@ -94,6 +113,9 @@ void dialogueClient(int* sd)
 								 strcpy(ensClient[j].pseudo,req_decoupe[1]);
 								 ensClient[j].mode = atoi(req_decoupe[4]);
 								 ensClient[j].socketClient = clientRecup;
+
+								 //Sauvergarde du pseudo pour le client en cours
+								 strcpy(pseudo,ensClient[j].pseudo);
 							}
 
 						pthread_mutex_unlock(&mutex_ensembleClient);
@@ -110,29 +132,77 @@ void dialogueClient(int* sd)
 				break; 
 
 				//Liste des clients 
-				case 120:
+				case 120:{
+
+						char infoClient[nbClient*MAX_TAILLE_PSEUDO];
+						memset(infoClient,nbClient*MAX_TAILLE_PSEUDO,0); //nettoyer le tableau
+						int nbClientTchat=0;
+
 						// On verrouille et dévérouille le mutex //
 						pthread_mutex_lock(&mutex_ensembleClient); 
 							
-							sprintf(rep,"%i\\%d",220,nbClient); 
-
 							for(int i=0; i<MAX_CLIENT; i++){
-								
-								//Verfie que ce n'est pas une place vide
-								if(ensClient[i].mode != -1){
-									strcat(rep,"\\");
-									strcat(rep,ensClient[i].pseudo);
+
+								//Verfie qu'on est en mode Tchat et que ce n'est pas nous même 
+								if((ensClient[i].mode == 1 || ensClient[i].mode == 2) && (strcmp(ensClient[i].pseudo,pseudo)!=0)){
+									strcat(infoClient,"\\");
+									strcat(infoClient,ensClient[i].pseudo);
+									nbClientTchat++;
 								}
 							}		
 
 						pthread_mutex_unlock(&mutex_ensembleClient);
 
+						sprintf(rep,"%i\\%d",220,nbClientTchat);
+
+						strcat(rep,infoClient);
+							
 						CHECK(write(*sd,rep,strlen(rep)+1),"Erreur Envoi Requete");
+				}		
+				break;
+
+				//Demande info d'un client
+				case 121 :{
+
+						int i=0;
+						int flag=0;
+						while (result != NULL){
+							strcpy(req_decoupe[i],result);							
+							result = strtok( NULL, "\\");
+							i++;
+						}	
+
+						printf("pseudo demandé %s\n",req_decoupe[1]);
+
+						// On verrouille et dévérouille le mutex //
+						pthread_mutex_lock(&mutex_ensembleClient); 
+
+							for(int i=0; i<MAX_CLIENT; i++){
+								
+								//Verfie que ce n'est pas une place vide et que ce n'est pas nous même 
+								if(ensClient[i].mode != -1 && strcmp(ensClient[i].pseudo,req_decoupe[1])==0){
+									flag=1;
+									sprintf(rep,"%i\\%d\\%d",221,ensClient[i].socketClient.sin_addr.s_addr,ensClient[i].socketClient.sin_port); 
+									break;
+								}
+							}		
+						pthread_mutex_unlock(&mutex_ensembleClient);
+
+						if(flag == 1){
+							CHECK(write(*sd,rep,strlen(rep)+1),"Erreur Envoi Requete");
+						} 
+						else{
+							sprintf(rep,"%i",321);
+							CHECK(write(*sd,rep,strlen(rep)+1),"Erreur Envoi Requete");
+						}
+
+				}		
 				break;
 			
 			}
-		//} 
+		} 
 
+	return;
 }
 
 

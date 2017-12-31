@@ -143,28 +143,30 @@ void identification(int* sa,int* mode, char* pseudo, struct sockaddr_in* svcClt)
 	//Dmd connexion 
 	sprintf(req,"%i\\%s\\%i\\%i\\%i",110,pseudo,svcClt->sin_addr.s_addr,svcClt->sin_port,*mode); 
 	CHECK(write(*sa,req,strlen(req)+1),"Erreur Envoi Requete");
+	
+	
+	while(1){
 
-	//Reception reponse
-	CHECK(read(*sa,rep,MAX_BUFF),"Erreur Reception Reponse");
-
-	//Reccupération id reponse
-	sscanf(rep,"%i",&repId);
-	
-	
-	while(repId != 0){
-	
 		memset(rep,MAX_BUFF,0); //nettoyer la chaine de requete
+
+		//Reception reponse
+		CHECK(read(*sa,rep,MAX_BUFF),"Erreur Reception Reponse");
+
+		//Reccupération id reponse
+		sscanf(rep,"%i",&repId);
+
 		printf("Repid : %d \n", repId);
 	
 		switch(repId) {
 
 			case 0 : //Fin comm
 				printf("Communication terminée \n");
+				return;
 			break; 
 
 			case 210 :
 					printf("Pseudo OK\n");
-					repId=0;
+					return;
 			break;
 
 			case 310 : 
@@ -202,17 +204,22 @@ void modeTchat(int* sa){
 	//Dmd connexion 
 	sprintf(req,"%i\\",120); 
 	CHECK(write(*sa,req,strlen(req)+1),"Erreur Envoi Requete");
+	printf("Je suis dans mode tchat.\nJ'ai envoyé : %s \n", req);
 
 	
-	//Reception reponse
-	CHECK(read(*sa,rep,MAX_BUFF),"Erreur Reception Reponse");
-	
-	result=strtok(req,"\\");
+	while(1){
 
-	//Récuperer la commande en int
-	repId = atoi(result);
-	
-	while(repId != 0){
+		memset(rep,MAX_BUFF,0); //nettoyer la chaine de requete
+
+		//Reception reponse
+		CHECK(read(*sa,rep,MAX_BUFF),"Erreur Reception Reponse");
+		
+		printf("J'ai reçu dans le mode tchat %s\n",rep);
+
+		result=strtok(rep,"\\");
+
+		//Récuperer la commande en int
+		repId = atoi(result);
 
 		switch(repId) {
 
@@ -222,35 +229,48 @@ void modeTchat(int* sa){
 
 			case 220 :{
 					
-				int i=0,nbClient;
+				int i=0,nbClient,indiceClient;
+				char (*clientConnect)[MAX_BUFF] = NULL;
 				
-				printf("result 0 est %s",result);
+				/*printf("result 0 est %s",result);
 				result = strtok( NULL, "\\");
 				printf("result 1 est %s",result);
 				result = strtok( NULL, "\\");
-				printf("result 2 est %s",result);
-/*
+				printf("result 2 est %s",result);*/
+
 				while (result != NULL){
 					
 					if(i == 1)
 					{
 						nbClient=atoi(result);	
-						char clientConnect[nbClient][MAX_BUFF];		
-						printf("Il y'a %d client(s) connecté(s)\n",nbClient);  
+						//Allocation dynamique du tableau des clients connectés
+						clientConnect = malloc(nbClient * sizeof(char));	
+						printf("Il y'a %d client(s) connecté(s) en mode Tchat\n",nbClient);  
 					}
 					
 					if(i>1)
 					{
 					
-						strcpy(clientConnect[i-2],result);
-						printf("* %d : %s \n",clientConnect[i-2]); 
+						strcpy(clientConnect[i-1],result);
+						printf("* %d : %s \n",i-1,clientConnect[i-1]); 
 					
 					}
 												
 					result = strtok( NULL, "\\");
 					i++;
 				}	
-		*/
+		
+				printf("Veuillez-saisir l'indice du client à contacter\n");
+				scanf("%d",&indiceClient);
+
+				//Renvoyer les données
+				memset(req,MAX_BUFF,0); //nettoyer la chaine de requete
+				sprintf(req,"%i\\%s",121,clientConnect[indiceClient]); 
+
+				printf("Client choisit %d = %s\n",indiceClient,clientConnect[indiceClient]);
+				CHECK(write(*sa,req,strlen(req)+1),"Erreur Envoi Requete");
+
+				free(*clientConnect);
 					
 			break;
 			}
@@ -260,10 +280,38 @@ void modeTchat(int* sa){
 				printf("Echec lors de la réception de la liste des clients\n");
 			}
 			break;	
+
+			case 321 : 
+			{
+				printf("Echec lors de la récupération des infos de ce client\n");
+
+				//Ressaie
+				sprintf(req,"%i\\",220); 
+				CHECK(write(*sa,req,strlen(req)+1),"Erreur Envoi Requete");
+			}
+			break;	
 		}
 
 	}
 
 }
 
+
+
+
+//Permet de faire le switch dans le main pour réaliser les traitements associés à chaque mode
+void switchMode(int* sDialogueServeur,int mode) {
+	switch(mode)
+	{
+		case 1 : 
+			printf("Je suis dans le mode 1: Tchat Privé.\n");	
+			modeTchat(sDialogueServeur);		
+		break;
+
+		case 2 :
+			printf("Je suis dans le mode 2: Tchat Public.\n");	
+			modeTchat(sDialogueServeur);	
+		break;
+	}
+}
 
