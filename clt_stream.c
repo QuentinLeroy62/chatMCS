@@ -4,7 +4,7 @@
 int main(){
 
 
-char pseudo[MAX_CLIENT];
+char pseudo[MAX_TAILLE_PSEUDO];
 int mode, sDialogueServeur;
 
 //Pour le mode serveur
@@ -22,15 +22,7 @@ struct sockaddr_in svcClt;
 
 	identification(&sDialogueServeur,&mode,pseudo,&svcClt);	
 	
-	switch(mode)
-	{
-		case (1) : 
-				modeTchat(&sDialogueServeur);		
-		break;
-	
-	
-	
-	}
+	switchMode(&sDialogueServeur, mode);
 	
 	close(sDialogueServeur); //Fermeture socket dialogue
 

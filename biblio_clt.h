@@ -11,5 +11,6 @@ void modeTchat(int*);
 void creationSocketEcoute(int*,struct sockaddr_in*);
 void * EcouteClient(void*);
 void * traitementThreadClient(void*);
+void switchMode(int*, int);
 
 

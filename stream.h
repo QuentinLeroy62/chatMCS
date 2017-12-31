@@ -19,5 +19,6 @@
 #define IP_SRV "127.0.0.1" //boucle locale
 #define MAX_BUFF 1024
 #define MAX_CLIENT 50
+#define MAX_TAILLE_PSEUDO 30
 
 
