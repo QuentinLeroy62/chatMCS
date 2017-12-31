@@ -22,7 +22,7 @@ struct sockaddr_in svcClt;
 
 	identification(&sDialogueServeur,&mode,pseudo,&svcClt);	
 	
-	switchMode(&sDialogueServeur, mode);
+	switchMode(&sDialogueServeur, mode, pseudo);
 	
 	close(sDialogueServeur); //Fermeture socket dialogue
 

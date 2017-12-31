@@ -28,7 +28,6 @@ void creationSocketEcoute(int* se,struct sockaddr_in* svc){
 	
 	svc->sin_addr.s_addr=socketRecup.sin_addr.s_addr;
 	svc->sin_port=socketRecup.sin_port;
-
  
 	//CONFIGURATION DU CLIENT SEVEUR EN ECOUTE
 	listen(*se,20); //20 en backlog (20 connection gardée en mémoire max si occupé) 
@@ -64,9 +63,9 @@ void * EcouteClient(void* argSe){
 		//Accepte la connexion et création socket clienet
 		lenSd = sizeof(client);
 
-		//CHECK(sd=accept(*se,(struct sockaddr*)&client,&lenSd),"Erreur Accept Ecoute");
+		CHECK(sd=accept(*se,(struct sockaddr*)&client,&lenSd),"Erreur Accept Ecoute");
 
-		//printf("Accepted connection from %s:%d\n", inet_ntoa(dialogue.sin_addr), ntohs(dialogue.sin_port));
+		printf("Accepted connection from %s:%d\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
 
 		//Creation du thread de service
 	  	CHECK(pthread_create(&thService,NULL,traitementThreadClient,(void*)&sd),"Pb creation thread");
@@ -82,8 +81,70 @@ void * EcouteClient(void* argSe){
 
 /*Thread qui traite la conenxion du client*/
 void * traitementThreadClient(void* argSd){
+	
+	int* socketTchat = (int*) argSd; 
 
-	//printf("Traitement du thread Client\n");
+	char req[MAX_BUFF]; //stocke la requete
+	char rep[MAX_BUFF]; //stocke la reponse
+	char req_decoupe[5][MAX_BUFF];
+
+	memset(req,MAX_BUFF,0); //nettoyer la chaine de requete
+	memset(rep,MAX_BUFF,0); //nettoyer la chaine de reponse
+
+
+	int result;
+	//Ensemble des descripteurs de fichiers à analyser
+	fd_set readset;
+
+	//Time out infini
+	struct timeval tv;
+	tv.tv_usec=0;
+
+   	FD_ZERO(&readset);
+   	FD_SET(*socket, &readset);
+   	result = select(*socket+1, &readset, NULL, NULL, &tv);
+
+	int idCommande=0; //stocke l'id de la commande initialisation à 0pour passer au - moins une fois dans le while
+	char *result;
+
+	while(1){
+
+		//Reception requete
+		if(result) CHECK(read(*socketTchat,req,MAX_BUFF),"Erreur Reception Requete");
+
+		//Recuppère l'id de la commande
+		printf("La requete est: %s \n",req);
+		result=strtok(req,"\\");
+		printf("La commande est: %s \n",result);
+
+		//Récuperer la commande en int
+		idCommande = atoi(result);
+	
+		switch (idCommande){
+		
+			case 130 : {
+				
+				int i=0;
+				int choix=0;
+				while (result != NULL){
+					strcpy(req_decoupe[i],result);							
+					result = strtok( NULL, "\\");
+					i++;
+				}	
+
+				printf("L'utilisateur %s propose le débat %s\n",req_decoupe[1],req_decoupe[2]);
+				printf("0 : Accepter   1 : Refuser \n");
+				scanf("%d",&choix);
+
+			}
+			break;
+
+			
+			
+		}
+	} 
+
+	printf("Traitement du thread Client\n");
 	pthread_exit(0);
 }
 
@@ -189,7 +250,7 @@ void identification(int* sa,int* mode, char* pseudo, struct sockaddr_in* svcClt)
 
 
 //Traite les reqûetes quand mode Tchat (mode 1 ou 2)
-void modeTchat(int* sa){
+void modeTchat(int* sa,char* pseudo){
 			
 	char req[MAX_BUFF]; //requete
 	char rep[MAX_BUFF]; //stockage réponse
@@ -198,7 +259,7 @@ void modeTchat(int* sa){
 	
 	char element[MAX_BUFF]; //stockage element i
 	int repId = 0; //stockage Id reponse
-	char rep_decoupe[MAX_CLIENT+2][MAX_BUFF]; //contient la rep decoupe.
+	char rep_decoupe[MAX_CLIENT][MAX_BUFF]; //contient la rep decoupe.
 	char *result;
 	
 	//Dmd connexion 
@@ -245,7 +306,7 @@ void modeTchat(int* sa){
 						nbClient=atoi(result);	
 						//Allocation dynamique du tableau des clients connectés
 						clientConnect = malloc(nbClient * sizeof(char));	
-						printf("Il y'a %d client(s) connecté(s) en mode Tchat\n",nbClient);  
+						printf("Il y'a %d client(s) disponible(s) en mode Tchat\n",nbClient);  
 					}
 					
 					if(i>1)
@@ -275,6 +336,20 @@ void modeTchat(int* sa){
 			break;
 			}
 
+			case 221 :{
+
+				int i=0;
+				while (result != NULL){
+					strcpy(rep_decoupe[i],result);							
+					result = strtok( NULL, "\\");
+					i++;
+				}						
+				
+				//Adresse,Port
+				dialogueClient(rep_decoupe[1],atoi(rep_decoupe[2]),pseudo);
+			}
+			break;
+
 			case 320 : 
 			{
 				printf("Echec lors de la réception de la liste des clients\n");
@@ -286,7 +361,7 @@ void modeTchat(int* sa){
 				printf("Echec lors de la récupération des infos de ce client\n");
 
 				//Ressaie
-				sprintf(req,"%i\\",220); 
+				sprintf(req,"%i\\",120); 
 				CHECK(write(*sa,req,strlen(req)+1),"Erreur Envoi Requete");
 			}
 			break;	
@@ -300,18 +375,57 @@ void modeTchat(int* sa){
 
 
 //Permet de faire le switch dans le main pour réaliser les traitements associés à chaque mode
-void switchMode(int* sDialogueServeur,int mode) {
+void switchMode(int* sDialogueServeur, int mode, char* pseudo) {
 	switch(mode)
 	{
 		case 1 : 
 			printf("Je suis dans le mode 1: Tchat Privé.\n");	
-			modeTchat(sDialogueServeur);		
+			modeTchat(sDialogueServeur, pseudo);		
 		break;
 
 		case 2 :
 			printf("Je suis dans le mode 2: Tchat Public.\n");	
-			modeTchat(sDialogueServeur);	
+			modeTchat(sDialogueServeur, pseudo);	
 		break;
 	}
+}
+
+
+////// DIALOGUE ENTRE 2 CLIENTS ////
+void dialogueClient(char* adresse, int port, char* pseudo){
+
+	int sDialogueClient;
+
+	char req[MAX_BUFF]; //requete
+	char rep[MAX_BUFF]; //stockage réponse
+	char nomDebat[MAX_BUFF]; //nom du débat en cours
+	memset(req,MAX_BUFF,0); //nettoyer la chaine de requete
+	memset(rep,MAX_BUFF,0); //nettoyer la chaine de requete
+	memset(nomDebat,MAX_BUFF,0); //nettoyer la chaine de requete
+
+	printf("Je suis dans dialogue\n");
+	printf("%s\n",adresse);
+	printf("%d\n",ntohs(port));
+
+	//Creation de la socket de dialogue
+	CHECK(sDialogueClient=socket(AF_INET,SOCK_STREAM,0),"probleme creation socket Dialogue Serveur Central");
+	
+	//Preparation de l'adressage Client-Serveur
+	struct sockaddr_in svc;
+	svc.sin_family=AF_INET;
+	svc.sin_port=port;  
+	svc.sin_addr.s_addr=atoi(adresse);
+	memset(&svc.sin_zero,0,8);
+
+	//Etablissement connexion Client-Serveur
+	CHECK(connect(sDialogueClient,(struct sockaddr *)&svc,sizeof(svc)),"Erreur connect");	
+
+	printf("Veuillez-saisir le nom du débat\n");
+	scanf("%s",nomDebat);
+
+	sprintf(req,"%i\\%s\\%s",130,pseudo,nomDebat); 
+	CHECK(write(sDialogueClient,req,strlen(req)+1),"Erreur Envoi Requete");
+
+
 }
 
