@@ -21,5 +21,6 @@
 #define MAX_BUFF 1024
 #define MAX_CLIENT 50
 #define MAX_TAILLE_PSEUDO 30
+#define MAX_DEBAT 10
 
 

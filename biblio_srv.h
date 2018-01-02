@@ -8,10 +8,17 @@ typedef struct{
 	struct sockaddr_in socketClient; //contient la socket du client
 } client;
 
+typedef struct {
+	char nomDebat[MAX_BUFF];
+	struct sockaddr_in socketCltServeur;	
+} debat;
 
 //VARIABLES 
 extern int nbClient;
 extern client ensClient[MAX_CLIENT];
+
+extern int nbDebatEnCours;
+extern debat ensDebat[MAX_DEBAT];
 
 //MUTEX
 extern pthread_mutex_t  mutex_ensembleClient;

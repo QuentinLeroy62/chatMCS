@@ -23,7 +23,7 @@ void creationSocketEcoute(int* se,struct sockaddr_in* svc){
 
 	//Recupération du port et de l'adresse de la socke écoute
 	struct sockaddr_in socketRecup;
-	int tailleStruct = sizeof(socketRecup);
+	socklen_t tailleStruct = sizeof(socketRecup);
 	getsockname(*se,(struct sockaddr*)&socketRecup,&tailleStruct);
 	
 	svc->sin_addr.s_addr=socketRecup.sin_addr.s_addr;
@@ -87,30 +87,25 @@ void * traitementThreadClient(void* argSd){
 	char req[MAX_BUFF]; //stocke la requete
 	char rep[MAX_BUFF]; //stocke la reponse
 	char req_decoupe[5][MAX_BUFF];
+	char pseudoDestinataire[MAX_TAILLE_PSEUDO];
+	char nomDebat[MAX_BUFF];
+	char nameFile[MAX_BUFF];
+	char message[MAX_BUFF];
+
+	FILE* archive = NULL;
 
 	memset(req,MAX_BUFF,0); //nettoyer la chaine de requete
 	memset(rep,MAX_BUFF,0); //nettoyer la chaine de reponse
-
-
-	int result;
-	//Ensemble des descripteurs de fichiers à analyser
-	fd_set readset;
-
-	//Time out infini
-	struct timeval tv;
-	tv.tv_usec=0;
-
-   	FD_ZERO(&readset);
-   	FD_SET(*socket, &readset);
-   	result = select(*socket+1, &readset, NULL, NULL, &tv);
 
 	int idCommande=0; //stocke l'id de la commande initialisation à 0pour passer au - moins une fois dans le while
 	char *result;
 
 	while(1){
 
+		memset(req,MAX_BUFF,0); //nettoyer la chaine de requete
+
 		//Reception requete
-		if(result) CHECK(read(*socketTchat,req,MAX_BUFF),"Erreur Reception Requete");
+		CHECK(read(*socketTchat,req,MAX_BUFF),"Erreur Reception Requete");
 
 		//Recuppère l'id de la commande
 		printf("La requete est: %s \n",req);
@@ -134,13 +129,139 @@ void * traitementThreadClient(void* argSd){
 
 				printf("L'utilisateur %s propose le débat %s\n",req_decoupe[1],req_decoupe[2]);
 				printf("0 : Accepter   1 : Refuser \n");
-				scanf("%d",&choix);
+
+				strcpy(pseudoDestinataire,req_decoupe[1]);
+				strcpy(nomDebat,req_decoupe[2]);
+
+				void* resultat;
+
+				//Si saisie en cours
+				if(thSaisie != 0) CHECK(pthread_cancel(thSaisie),"Pb cancel le thread de saisie");
+
+				CHECK(pthread_create(&thSaisie,NULL,SaisieChoixUtilisateur,NULL),"Pb creation thread"); 
+
+				pthread_join(thSaisie,&resultat);
+
+				thSaisie = 0;
+
+				choix = atoi(resultat);
+				printf("Choix %d\n",choix);
+				
+				memset(rep,MAX_BUFF,0);
+
+				if(choix==0){
+					sprintf(rep,"%i",230);
+
+					//Fichier archive
+					time_t now = time(NULL);
+					struct tm * p_dateheure = localtime(&now);
+					char buffName[4];
+					
+					strcpy(nameFile,nomDebat);
+					strcat(nameFile,"-");
+
+					sprintf(buffName,"%i",p_dateheure->tm_mday);
+					strcat(nameFile,buffName);
+					strcat(nameFile,"-");
+
+					sprintf(buffName,"%i",p_dateheure->tm_mon);
+					strcat(nameFile,buffName);
+					strcat(nameFile,"-");
+
+	
+					sprintf(buffName,"%i",p_dateheure->tm_year);
+					strcat(nameFile,buffName);
+					strcat(nameFile,".txt");
+
+					archive = fopen(nameFile, "a");
+
+					if (archive != NULL)
+					{
+					fputs(nomDebat,archive);
+					fputs(" - ",archive);
+					fputs(pseudo,archive);
+					fputs(" - ",archive);
+					fputs(pseudoDestinataire,archive);
+					fputs("\n",archive);
+					fclose(archive);
+					}
+				}	
+				else sprintf(rep,"%i",330);
+				CHECK(write(*socketTchat,rep,strlen(req)+1),"Erreur Envoi Requete");
+
+			/*
+				//Prevenir le serveur central
+				memset(req,MAX_BUFF,0);
+				memset(rep,MAX_BUFF,0);
+
+				struct sockaddr_in socketTchatRecup;
+				socklen_t tailleStruct = sizeof(socketTchatRecup);
+				getsockname(*socketTchat,(struct sockaddr*)&socketTchatRecup,&tailleStruct);
+
+				//sprintf(req,"%i\\%i\\%i\\%s\\%s",131,socketTchatRecup.sin_addr.s_addr,socketTchatRecup.sin_port,nomDebat,pseudoDestinataire);
+
+				CHECK(write(sDialogueServeur,req,strlen(req)),"Erreur Envoi Requete");
+
+				//Reception reponse
+				CHECK(read(sDialogueServeur,rep,MAX_BUFF),"Erreur Reception Requete");
+
+				//Recuppère l'id de la commande
+				printf("La réponse est: %s \n",rep);
+				result=strtok(rep,"\\");
+				printf("La commande est: %s \n",result);
+
+				//Récuperer la commande en int
+				idCommande = atoi(result);
+			*/			
 
 			}
 			break;
+			
+			
+			case 132 :{
 
-			
-			
+				int i=0;
+				while (result != NULL){
+					strcpy(req_decoupe[i],result);							
+					result = strtok( NULL, "\\");
+					i++;
+				}	
+
+				//Sauvergarde message dans le fichier d'archive
+				archive = fopen(nameFile, "a");
+				if (archive != NULL)
+				{
+				fputs(req_decoupe[1],archive);
+				fputs("\n",archive);
+				fclose(archive);
+				}
+
+				//Affichage du message 
+				printf("%s\n",req_decoupe[1]);
+
+				memset(message,MAX_BUFF,0);
+
+				char buff[MAX_BUFF];
+
+				strcpy(message,pseudo);
+				strcat(message," : ");
+
+				scanf("%s",buff);
+				strcat(message,buff);
+
+				//Sauvergarde message dans le fichier d'archive
+				archive = fopen(nameFile, "a");
+				if (archive != NULL)
+				{
+				fputs(message,archive);
+				fputs("\n",archive);
+				fclose(archive);
+				}
+
+				sprintf(req,"%i\\%s",232,message); 
+				CHECK(write(*socketTchat,req,strlen(req)+1),"Erreur Envoi Requete");
+			}	
+			break;
 		}
 	} 
 
@@ -159,13 +280,31 @@ void afficherMenu(int* choix){
 	printf("3: Mode spectateur\n");
 	printf("4: Consultation archive\n\n"); 
 	printf("Votre choix : ");
-	scanf("%d",choix);
+	
+	void* resultat;
+
+	if(thSaisie != 0) CHECK(pthread_cancel(thSaisie),"Pb cancel le thread de saisie");
+	CHECK(pthread_create(&thSaisie,NULL,SaisieChoixUtilisateur,NULL),"Pb creation thread"); 
+	pthread_join(thSaisie,&resultat);
+
+	thSaisie=0;
+
+	*choix = atoi(resultat);
 }
 
 /*Demande le pseudo au moment de la connexion*/
 void demandePseudo(char* pseudo) {
 	printf("Veuillez-saisir votre pseudo \n");
-	scanf("%s",pseudo);
+
+	void* resultat;
+
+	if(thSaisie != 0) CHECK(pthread_cancel(thSaisie),"Pb cancel le thread de saisie");
+	CHECK(pthread_create(&thSaisie,NULL,SaisieChoixUtilisateur,NULL),"Pb creation thread"); 
+	pthread_join(thSaisie,&resultat);
+
+	thSaisie = 0;
+
+	strcpy(pseudo,resultat);
 }
 
 /*Etablit une connexion avec le serveur central*/
@@ -173,7 +312,7 @@ void connexionServeurCentral(int* sDialogue){
 	
 	//Creation de la socket de dialogue
 	CHECK(*sDialogue=socket(AF_INET,SOCK_STREAM,0),"probleme creation socket Dialogue Serveur Central");
-	
+
 	//Preparation de l'adressage serveur
 	struct sockaddr_in svc;
 	svc.sin_family=AF_INET;
@@ -182,7 +321,7 @@ void connexionServeurCentral(int* sDialogue){
 	memset(&svc.sin_zero,0,8);
 
 	//Etablissement connexion serveur
-	CHECK(connect(*sDialogue,(struct sockaddr *)&svc,sizeof(svc)),"Erreur connect");	
+	CHECK(connect(*sDialogue,(struct sockaddr *)&svc,sizeof(svc)),"Erreur connect");
 }
 
 
@@ -293,12 +432,6 @@ void modeTchat(int* sa,char* pseudo){
 				int i=0,nbClient,indiceClient;
 				char (*clientConnect)[MAX_BUFF] = NULL;
 				
-				/*printf("result 0 est %s",result);
-				result = strtok( NULL, "\\");
-				printf("result 1 est %s",result);
-				result = strtok( NULL, "\\");
-				printf("result 2 est %s",result);*/
-
 				while (result != NULL){
 					
 					if(i == 1)
@@ -320,15 +453,28 @@ void modeTchat(int* sa,char* pseudo){
 					result = strtok( NULL, "\\");
 					i++;
 				}	
-		
+
 				printf("Veuillez-saisir l'indice du client à contacter\n");
-				scanf("%d",&indiceClient);
+
+				
+				void* resultat;
+
+				if(thSaisie != 0) CHECK(pthread_cancel(thSaisie),"Pb cancel le thread de saisie");
+
+				CHECK(pthread_create(&thSaisie,NULL,SaisieChoixUtilisateur,NULL),"Pb creation thread"); 
+	
+				pthread_join(thSaisie,&resultat);
+
+				thSaisie = 0;
+
+				indiceClient = atoi(resultat);
+
+				printf("Client choisit %d = %s\n",indiceClient,clientConnect[indiceClient]);
 
 				//Renvoyer les données
 				memset(req,MAX_BUFF,0); //nettoyer la chaine de requete
 				sprintf(req,"%i\\%s",121,clientConnect[indiceClient]); 
 
-				printf("Client choisit %d = %s\n",indiceClient,clientConnect[indiceClient]);
 				CHECK(write(*sa,req,strlen(req)+1),"Erreur Envoi Requete");
 
 				free(*clientConnect);
@@ -394,18 +540,19 @@ void switchMode(int* sDialogueServeur, int mode, char* pseudo) {
 ////// DIALOGUE ENTRE 2 CLIENTS ////
 void dialogueClient(char* adresse, int port, char* pseudo){
 
-	int sDialogueClient;
+	int sDialogueClient,repId;
+
+	char rep_decoupe[2][MAX_BUFF]; //contient la rep decoupe.
+	char *result;
 
 	char req[MAX_BUFF]; //requete
 	char rep[MAX_BUFF]; //stockage réponse
 	char nomDebat[MAX_BUFF]; //nom du débat en cours
+	char message[MAX_BUFF];
 	memset(req,MAX_BUFF,0); //nettoyer la chaine de requete
 	memset(rep,MAX_BUFF,0); //nettoyer la chaine de requete
 	memset(nomDebat,MAX_BUFF,0); //nettoyer la chaine de requete
-
-	printf("Je suis dans dialogue\n");
-	printf("%s\n",adresse);
-	printf("%d\n",ntohs(port));
+	memset(message,MAX_BUFF,0); //nettoyer la chaine de requete
 
 	//Creation de la socket de dialogue
 	CHECK(sDialogueClient=socket(AF_INET,SOCK_STREAM,0),"probleme creation socket Dialogue Serveur Central");
@@ -421,11 +568,108 @@ void dialogueClient(char* adresse, int port, char* pseudo){
 	CHECK(connect(sDialogueClient,(struct sockaddr *)&svc,sizeof(svc)),"Erreur connect");	
 
 	printf("Veuillez-saisir le nom du débat\n");
-	scanf("%s",nomDebat);
+
+
+	void* resultat;
+	
+	if(thSaisie != 0) CHECK(pthread_cancel(thSaisie),"Pb cancel le thread de saisie");
+
+	CHECK(pthread_create(&thSaisie,NULL,SaisieChoixUtilisateur,NULL),"Pb creation thread"); 
+
+	pthread_join(thSaisie,&resultat);
+	thSaisie = 0;
+
+	strcpy(nomDebat,resultat);
+
 
 	sprintf(req,"%i\\%s\\%s",130,pseudo,nomDebat); 
 	CHECK(write(sDialogueClient,req,strlen(req)+1),"Erreur Envoi Requete");
 
+	while(1){
+
+		memset(rep,MAX_BUFF,0); //nettoyer la chaine de requete
+
+		//Reception reponse
+		CHECK(read(sDialogueClient,rep,MAX_BUFF),"Erreur Reception Reponse");
+
+		printf("J'ai reçu dans le mode débat %s\n",rep);
+
+		result=strtok(rep,"\\");
+
+		//Récuperer la commande en int
+		repId = atoi(result);
+
+		switch(repId) {
+
+			case 0 : //Fin comm
+				printf("Communication terminée \n");
+			break; 
+
+			case 230 :
+				printf("Connexion acceptée\n");	
+
+				printf("Saisir un message\n");
+				
+				memset(message,MAX_BUFF,0);
+
+				char buff[MAX_BUFF];
+
+				strcpy(message,pseudo);
+				strcat(message," : ");
+
+				scanf("%s",buff);
+				strcat(message,buff);
+
+				sprintf(req,"%i\\%s",132,message); 
+
+				CHECK(write(sDialogueClient,req,strlen(req)+1),"Erreur Envoi Requete");
+
+			break;
+
+			case 232 :{
+				int i=0;
+				while (result != NULL){
+					strcpy(rep_decoupe[i],result);							
+					result = strtok( NULL, "\\");
+					i++;
+				}	
+
+				//Affichage du message 
+				printf("%s\n",rep_decoupe[1]);
+
+				memset(message,MAX_BUFF,0);
+
+				char buff[MAX_BUFF];
+
+				strcpy(message,pseudo);
+				strcat(message," : ");
+
+				scanf("%s",buff);
+				strcat(message,buff);
+
+				sprintf(req,"%i\\%s",132,message); 
+				CHECK(write(sDialogueClient,req,strlen(req)+1),"Erreur Envoi Requete");
+			}	
+			break;
+
+			case 330 : 
+				printf("Connexion refusée\n");
+			break; 
+		}
+
+	}
+
+
 
 }
 
+
+void* SaisieChoixUtilisateur(void* arg){
+
+	char *resultat;
+	resultat = malloc(3*sizeof(char)); 
+
+	scanf("%s",resultat);
+
+	pthread_exit(resultat);
+}

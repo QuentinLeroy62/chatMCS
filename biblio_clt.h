@@ -1,6 +1,12 @@
 #include "stream.h"
 
 
+//Variables
+pthread_t thSaisie; 
+
+extern char pseudo[MAX_TAILLE_PSEUDO];
+extern int sDialogueServeur;
+
 
 //PROTOTYPES
 void afficherMenu(int*);
@@ -13,5 +19,7 @@ void * EcouteClient(void*);
 void * traitementThreadClient(void*);
 void switchMode(int*,int,char*);
 void dialogueClient(char*,int,char*);
+void * SaisieChoixUtilisateur(void*);
+
 
 

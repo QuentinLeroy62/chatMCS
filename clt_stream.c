@@ -1,11 +1,11 @@
 #include "biblio_clt.h"
 
+char pseudo[MAX_TAILLE_PSEUDO];
+int sDialogueServeur;
 
 int main(){
 
-
-char pseudo[MAX_TAILLE_PSEUDO];
-int mode, sDialogueServeur;
+int mode; 
 
 //Pour le mode serveur
 int se;
