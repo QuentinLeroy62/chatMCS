@@ -4,6 +4,9 @@
 int nbClient = 0;
 client ensClient[MAX_CLIENT];
 
+int nbDebatEnCours = 0;
+debat ensDebat[MAX_DEBAT];
+
 
 //Mutex
 pthread_mutex_t  mutex_ensembleClient  = PTHREAD_MUTEX_INITIALIZER;
@@ -58,6 +61,16 @@ void ** resultat;
 	pthread_mutex_unlock(&mutex_ensembleClient);
 
 /////////////////////////////////////////
+
+////Initialisation ensDebat//////
+
+	//Mise en place du tableau creux
+	for(int i=0; i<MAX_DEBAT; i++){
+		strcpy(ensDebat[i].nomDebat,"");
+	}
+
+////////////////////////////	
+
 
 	while(1){			
 		

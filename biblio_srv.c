@@ -153,7 +153,7 @@ void dialogueClient(int* sd, char* pseudo)
 
 						pthread_mutex_unlock(&mutex_ensembleClient);
 
-						sprintf(rep,"%i\\%d",220,nbClientTchat);
+						sprintf(rep,"%i\\%i",220,nbClientTchat);
 
 						strcat(rep,infoClient);
 							
@@ -182,7 +182,7 @@ void dialogueClient(int* sd, char* pseudo)
 								//Verfie que ce n'est pas une place vide et que ce n'est pas nous même 
 								if(ensClient[i].mode != -1 && strcmp(ensClient[i].pseudo,req_decoupe[1])==0){
 									flag=1;
-									sprintf(rep,"%i\\%d\\%d",221,ensClient[i].socketClient.sin_addr.s_addr,ensClient[i].socketClient.sin_port); 
+									sprintf(rep,"%i\\%i\\%i",221,ensClient[i].socketClient.sin_addr.s_addr,ensClient[i].socketClient.sin_port); 
 									break;
 								}
 							}		
@@ -197,6 +197,73 @@ void dialogueClient(int* sd, char* pseudo)
 						}
 
 				}		
+				break;
+
+				//Nouveau débat en cours 
+				case 131 :{
+
+					int i=0;
+					while (result != NULL){
+						strcpy(req_decoupe[i],result);							
+						result = strtok( NULL, "\\");
+						i++;
+					}
+					
+					int j = 0;
+					short OccurenceNomDebat = 0;
+
+					for(int i=0; i<MAX_DEBAT; i++){
+						
+						//Recherche d'une place libre dans l'ensDebat
+						if(ensClient[i].mode == -1 && j==0 ) j=i;
+			
+						//Verification du nom
+						if(strcmp(req_decoupe[3],ensDebat[i].nomDebat)==0){
+							OccurenceNomDebat++; 
+						}  
+					}	
+
+					//On concatène un numéro au nom du débat si un débat du même nom est en cours
+					if(OccurenceNomDebat != 0) sprintf(req_decoupe[3],"%s-%i",req_decoupe[3],OccurenceNomDebat);
+
+					//Reconstitution de la socket clientSeveur
+					struct sockaddr_in clientServeur; 
+					clientServeur.sin_family=AF_INET;
+					clientServeur.sin_addr.s_addr=atoi(req_decoupe[1]);
+					clientServeur.sin_port=atoi(req_decoupe[2]);
+					memset(&clientServeur.sin_zero,0,8);
+
+					//Sauvergarde des données
+					strcpy(ensDebat[j].nomDebat,req_decoupe[3]);
+					ensDebat[j].socketCltServeur = clientServeur;
+
+					//Modification de l'état des clients
+					short flag=0;
+					for(int i=0; i<MAX_CLIENT; i++){
+
+						if(strcmp(req_decoupe[4],ensClient[i].pseudo)==0){
+							ensClient[i].etat = 1;
+							flag++;
+						}
+
+						if((ensClient[i].socketClient.sin_port == clientServeur.sin_port) && 
+							(ensClient[i].socketClient.sin_addr.s_addr == clientServeur.sin_addr.s_addr)){
+							ensClient[i].etat = 1;
+							flag++;
+						}
+					}		
+
+					if(flag==2) sprintf(rep,"%i",231);
+					else sprintf(rep,"%i",331);
+
+					//int sClientServeur;
+					//CHECK(bind(sClientServeur,(struct sockaddr*)&clientServeur,sizeof(clientServeur)),"test associer adr a la socket");
+		
+
+					printf("Je répond %s\n",rep);
+					CHECK(write(*sd,rep,strlen(rep)+1),"Erreur Envoi Requete");	
+
+				}
 				break;
 			
 			}
