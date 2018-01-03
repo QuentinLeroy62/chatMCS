@@ -155,25 +155,24 @@ void * traitementThreadClient(void* argSd){
 					//Fichier archive
 					time_t now = time(NULL);
 					struct tm * p_dateheure = localtime(&now);
-					char buffName[4];
+					char buffName[8];
 					
 					strcpy(nameFile,nomDebat);
 					strcat(nameFile,"-");
 
-					sprintf(buffName,"%i",p_dateheure->tm_mday);
+					sprintf(buffName,"%02i",p_dateheure->tm_mday);
 					strcat(nameFile,buffName);
 					strcat(nameFile,"-");
 
-					sprintf(buffName,"%i",p_dateheure->tm_mon);
+					sprintf(buffName,"%02i",(p_dateheure->tm_mon)+1);
 					strcat(nameFile,buffName);
 					strcat(nameFile,"-");
 
-	
-					sprintf(buffName,"%i",p_dateheure->tm_year);
+					sprintf(buffName,"%i",(p_dateheure->tm_year)+1900);
 					strcat(nameFile,buffName);
 					strcat(nameFile,".txt");
 
-					archive = fopen(nameFile, "a");
+					archive = fopen(nameFile, "w");
 
 					if (archive != NULL)
 					{
@@ -182,7 +181,22 @@ void * traitementThreadClient(void* argSd){
 					fputs(pseudo,archive);
 					fputs(" - ",archive);
 					fputs(pseudoDestinataire,archive);
+					fputs(" - Le : ",archive);
+
+					sprintf(buffName,"%02i",p_dateheure->tm_mday);
+					fputs(buffName,archive);
+
+					fputs("-",archive);
+					sprintf(buffName,"%02i",(p_dateheure->tm_mon)+1);
+					fputs(buffName,archive);
+
+					fputs("-",archive);
+					sprintf(buffName,"%i",(p_dateheure->tm_year)+1900);
+					fputs(buffName,archive);
+
 					fputs("\n",archive);
+					fputs("\n",archive);
+
 					fclose(archive);
 					}
 				}	
@@ -246,7 +260,7 @@ void * traitementThreadClient(void* argSd){
 				strcpy(message,pseudo);
 				strcat(message," : ");
 
-				scanf("%s",buff);
+				gets(buff);
 				strcat(message,buff);
 
 				//Sauvergarde message dans le fichier d'archive
@@ -617,7 +631,7 @@ void dialogueClient(char* adresse, int port, char* pseudo){
 				strcpy(message,pseudo);
 				strcat(message," : ");
 
-				scanf("%s",buff);
+				gets(buff);
 				strcat(message,buff);
 
 				sprintf(req,"%i\\%s",132,message); 
@@ -644,7 +658,7 @@ void dialogueClient(char* adresse, int port, char* pseudo){
 				strcpy(message,pseudo);
 				strcat(message," : ");
 
-				scanf("%s",buff);
+				gets(buff);
 				strcat(message,buff);
 
 				sprintf(req,"%i\\%s",132,message); 
